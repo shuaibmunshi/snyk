@@ -3,6 +3,7 @@ import pulumi_gcp as gcp
 
 # Get some provider-namespaced configuration values
 provider_cfg = pulumi.Config("gcp")
+gcp_project_name = "snyk"
 gcp_project = provider_cfg.require("project")
 gcp_region = provider_cfg.get("region", "northamerica-northeast2")
 # Get some additional configuration values
@@ -23,6 +24,27 @@ gke_subnet = gcp.compute.Subnetwork(
     network=gke_network.id,
     private_ip_google_access=True
 )
+
+# https://www.pulumi.com/registry/packages/gcp/api-docs/compute/routernat/
+# Create router
+gke_router = gcp.compute.Router("router",
+    region=gcp_region,
+    network=gke_network.id,
+    bgp=gcp.compute.RouterBgpArgs(
+        asn=64514,
+    ))
+
+# NAT
+gke_nat = gcp.compute.RouterNat("nat",
+    router=gke_router.name,
+    region=gcp_region,
+    nat_ip_allocate_option="AUTO_ONLY",
+    source_subnetwork_ip_ranges_to_nat="ALL_SUBNETWORKS_ALL_IP_RANGES",
+    log_config=gcp.compute.RouterNatLogConfigArgs(
+        enable=True,
+        filter="ERRORS_ONLY",
+    ))
+
 
 # Create a cluster in the new network and subnet
 gke_cluster = gcp.container.Cluster(
@@ -49,6 +71,8 @@ gke_cluster = gcp.container.Cluster(
             display_name="All networks"
         )]
     ),
+    # router=gke_router,
+    # nat=gke_nat,
     network=gke_network.name,
     networking_mode="VPC_NATIVE",
     private_cluster_config=gcp.container.ClusterPrivateClusterConfigArgs(
@@ -80,11 +104,36 @@ gke_nodepool = gcp.container.NodePool(
     node_count=nodes_per_zone,
     node_config=gcp.container.NodePoolNodeConfigArgs(
         machine_type="e2-small",
-        diskSizeGb="50",
+        disk_size_gb="50",
         oauth_scopes=["https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/devstorage.read_only"],
         service_account=gke_nodepool_sa.email
     )
 )
+
+# https://www.pulumi.com/registry/packages/gcp/api-docs/compute/firewall/
+gke_firewall_rule = gcp.compute.Firewall("pulumi-firewall-rules",
+    name="pulumi-firewall-rules",
+    network=gke_network.name,
+    allows=[
+        gcp.compute.FirewallAllowArgs(
+            protocol="tcp",
+            ports=[
+                "22",
+                "3389"
+            ]
+        ),
+        gcp.compute.FirewallAllowArgs(
+            protocol="tcp",
+            ports=[
+                "443",
+            ],
+        ),
+    ],
+    source_ranges=[
+        "0.0.0.0/0"
+    ]
+)
+
 
 # Build a Kubeconfig to access the cluster
 cluster_kubeconfig = pulumi.Output.all(
@@ -122,3 +171,4 @@ pulumi.export("networkId", gke_network.id)
 pulumi.export("clusterName", gke_cluster.name)
 pulumi.export("clusterId", gke_cluster.id)
 pulumi.export("kubeconfig", cluster_kubeconfig)
+pulumi.export('firewall_rule_name', gke_firewall_rule.name)
