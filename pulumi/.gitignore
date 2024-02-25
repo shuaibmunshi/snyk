@@ -1,0 +1,4 @@
+*.pyc
+venv/
+__pyache__/
+google-cloud-sdk/
