@@ -1,0 +1,4 @@
+config:
+  gcp:project: resonant-gizmo-415423
+  gcp:region: northamerica-northeast2
+  snyk:nodesPerZone: "1"
