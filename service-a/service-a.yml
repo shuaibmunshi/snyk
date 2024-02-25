@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: service-a
+  template:
+    metadata:
+      labels:
+        run: service-a
+    spec:
+      containers:
+      - name: service-a
+        # image: northamerica-northeast2-docker.pkg.dev/resonant-gizmo-415423/snyk-registry/service-a:latest
+        image: shuaibmunshi/service-a:latest
