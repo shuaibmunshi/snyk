@@ -14,5 +14,5 @@
 - gcloud auth login --brief
 - gcloud components install kubectl
 - gke-gcloud-auth-plugin --version # Make sure gcloud installed the auto plugin during installation
-- gcloud container clusters get-credentials gke-cluster-bba723c --region=northamerica-northeast2 --project resonant-gizmo-415423 # There's a bug in the GCP documentation here, --project is required but not in the docs
+- gcloud container clusters get-credentials gke-cluster-fc50b24 --region=northamerica-northeast2 --project resonant-gizmo-415423 # There's a bug in the GCP documentation here, --project is required but not in the docs
 - kubectl get namespaces
